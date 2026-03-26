@@ -437,13 +437,6 @@ Contributions welcome! Please:
 
 MIT License - See LICENSE.md for details
 
-## Support
-
-For issues or questions:
-- GitHub Issues: [Project Repository]
-- Documentation: See README sections above
-- Email: support@sharefiles.app
-
 ---
 
 **Built with ❤️ using Next.js, TypeScript, and Tailwind CSS**
