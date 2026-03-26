@@ -1,6 +1,6 @@
 'use client'
 
-import QRCode from 'qrcode.react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { Download } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -34,7 +34,7 @@ export function QRCodeDisplay({ code, filename }: QRCodeDisplayProps) {
           ref={qrRef}
           className="bg-white p-4 rounded-lg"
         >
-          <QRCode
+          <QRCodeCanvas
             value={downloadLink}
             size={200}
             level="H"
