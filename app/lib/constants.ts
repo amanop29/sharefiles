@@ -29,6 +29,8 @@ export const ALLOWED_FILE_TYPES = [
   'image/gif',
   'image/webp',
   'image/svg+xml',
+  'image/vnd.adobe.photoshop', // Adobe Photoshop
+  'image/x-coreldraw', // Corel Draw
   
   // Audio
   'audio/mpeg',
@@ -55,18 +57,21 @@ export const ALLOWED_FILE_TYPES = [
   'text/x-shellscript',
   'application/sql',
   'text/markdown',
+  'application/x-ipynb+json', // Jupyter notebooks
 ]
 
 export const EXPIRY_OPTIONS = {
   15: '15 minutes',
   60: '1 hour',
   1440: '24 hours',
+  10080: '7 days',
 } as const
 
 export const EXPIRY_LABELS = {
   15: '15m',
   60: '1h',
   1440: '24h',
+  10080: '7d',
 } as const
 
 export const CODE_LENGTH = 6
@@ -74,16 +79,11 @@ export const CODE_LENGTH = 6
 // Characters to use for code generation (excluding confusing chars: I, L, O, 0, 1)
 export const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
-export const API_ROUTES = {
-  UPLOAD: '/api/upload',
-  GET_FILE: '/api/get-file',
-  DELETE_EXPIRED: '/api/delete-expired',
-} as const
-
 // Extensions that should be accepted even when browsers send generic/empty MIME types.
 export const ALLOWED_FILE_EXTENSIONS = [
   // Code and markup
   'py',
+  'pyc',
   'html',
   'htm',
   'css',
@@ -134,4 +134,9 @@ export const ALLOWED_FILE_EXTENSIONS = [
   'tdl',
   'tcp',
   'tbk',
+  // Jupyter notebooks
+  'ipynb',
+  // Design software
+  'psd', // Adobe Photoshop
+  'cdr', // Corel Draw
 ] as const

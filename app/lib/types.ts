@@ -1,17 +1,5 @@
 // Type definitions for the ShareFiles app
 
-export interface FileMetadata {
-  id: string
-  code: string
-  fileUrl: string
-  filename: string
-  fileSize: number
-  mimeType: string
-  expiresAt: string
-  createdAt: string
-  downloadedCount: number
-}
-
 export interface UploadResponse {
   code: string
   expiresAt: string
@@ -39,4 +27,4 @@ export interface DownloadError {
   message: string
 }
 
-export type ExpiryMinutes = 15 | 60 | 1440
+export type ExpiryMinutes = 15 | 60 | 1440 | 10080

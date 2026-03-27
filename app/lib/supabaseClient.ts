@@ -9,11 +9,6 @@ if (!supabaseUrl) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL')
 }
 
-// Client for browser - use anon key
-export const supabaseClient = supabaseUrl && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  ? createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  : null
-
 // Server-side admin client - use service role key
 export const supabaseAdmin = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {

@@ -36,7 +36,11 @@ export function getTimeRemaining(expiresAt: Date): {
   const seconds = Math.floor((diff % 60000) / 1000)
 
   let text = ''
-  if (minutes > 60) {
+  if (minutes >= 1440) {
+    const days = Math.floor(minutes / 1440)
+    const hours = Math.floor((minutes % 1440) / 60)
+    text = hours > 0 ? `${days}d ${hours}h` : `${days}d`
+  } else if (minutes >= 60) {
     const hours = Math.floor(minutes / 60)
     text = `${hours}h ${minutes % 60}m`
   } else {
@@ -52,18 +56,6 @@ export function getTimeRemaining(expiresAt: Date): {
 }
 
 /**
- * Format date to readable string
- */
-export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
-
-/**
  * Copy text to clipboard
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
@@ -73,11 +65,4 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   } catch {
     return false
   }
-}
-
-/**
- * Generate download link from code
- */
-export function generateDownloadLink(code: string): string {
-  return `${window.location.origin}?code=${code}`
 }
