@@ -30,9 +30,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'upload' | 'download'>('upload')
   const [prefillDownloadCode, setPrefillDownloadCode] = useState('')
   const selectedTotalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0)
-  const remainingUploadBytes = Math.max(0, MAX_TOTAL_UPLOAD_SIZE - selectedTotalSize)
-  const uploadUsagePercent =
-    selectedTotalSize > 0 ? Math.min(100, Math.round((selectedTotalSize / MAX_TOTAL_UPLOAD_SIZE) * 100)) : 0
   const exceedsUploadLimit = selectedTotalSize > MAX_TOTAL_UPLOAD_SIZE
 
   // Handle URL code parameter for download
@@ -357,65 +354,6 @@ export default function Home() {
                       disabled={isUploading}
                       selectedFiles={selectedFiles}
                     />
-
-                    {selectedFiles.length > 0 && (
-                      <div
-                        style={{
-                          marginTop: '14px',
-                          marginBottom: '20px',
-                          padding: '14px',
-                          borderRadius: '12px',
-                          border: exceedsUploadLimit ? '1px solid var(--red)' : '1px solid var(--line)',
-                          backgroundColor: exceedsUploadLimit
-                            ? 'rgba(220, 38, 38, 0.08)'
-                            : 'rgba(26, 86, 255, 0.04)',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            gap: '12px',
-                            marginBottom: '10px',
-                            fontSize: '12px',
-                            color: 'var(--ink2)',
-                          }}
-                        >
-                          <span>
-                            Upload allowance: {formatFileSize(remainingUploadBytes)} remaining of{' '}
-                            {formatFileSize(MAX_TOTAL_UPLOAD_SIZE)}
-                          </span>
-                          <span>{uploadUsagePercent}% used</span>
-                        </div>
-
-                        <div
-                          style={{
-                            height: '8px',
-                            width: '100%',
-                            borderRadius: '999px',
-                            backgroundColor: 'var(--line)',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: `${uploadUsagePercent}%`,
-                              height: '100%',
-                              borderRadius: '999px',
-                              backgroundColor: exceedsUploadLimit ? 'var(--red)' : 'var(--accent)',
-                              transition: 'width 220ms ease',
-                            }}
-                          />
-                        </div>
-
-                        {exceedsUploadLimit && (
-                          <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--red)' }}>
-                            Selected files are over limit by{' '}
-                            {formatFileSize(selectedTotalSize - MAX_TOTAL_UPLOAD_SIZE)}.
-                          </p>
-                        )}
-                      </div>
-                    )}
 
                     {uploadProgress > 0 && (
                       <div style={{ marginTop: '16px', marginBottom: '24px' }}>
