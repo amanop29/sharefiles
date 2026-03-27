@@ -238,7 +238,9 @@ export function UploadBox({
       }}
     >
       <input
-        {...getInputProps()}
+        {...(getInputProps() as any)}
+        webkitdirectory="true"
+        directory="true"
       />
 
       {selectedFiles.length > 0 ? (
