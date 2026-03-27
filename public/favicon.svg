@@ -1,19 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Background rounded square -->
   <rect width="32" height="32" rx="7" fill="#0f0e0c"/>
-  
-  <!-- Document body -->
   <rect x="7" y="5" width="13" height="17" rx="1.5" fill="#f7f5f0"/>
-  
-  <!-- Folded corner -->
   <path d="M16 5 L20 9 L16 9 Z" fill="#0f0e0c" opacity="0.35"/>
   <path d="M16 5 L20 9 L16 9 Z" fill="#c8c5bf"/>
-  
-  <!-- Document lines -->
   <rect x="9.5" y="12" width="8" height="1.2" rx="0.6" fill="#0f0e0c" opacity="0.25"/>
   <rect x="9.5" y="14.5" width="6" height="1.2" rx="0.6" fill="#0f0e0c" opacity="0.25"/>
-  
-  <!-- Arrow up-right (share symbol) -->
   <circle cx="22" cy="23" r="7" fill="#1a56ff"/>
   <path d="M19.5 25.5 L24.5 20.5" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
   <path d="M21.5 20.5 L24.5 20.5 L24.5 23.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>

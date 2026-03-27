@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import JSZip from 'jszip'
 import { Header } from '@/app/components/Header'
 import { Hero } from '@/app/components/Hero'
 import { MainContent } from '@/app/components/MainContent'
@@ -13,7 +14,9 @@ import { DownloadForm } from '@/app/components/DownloadForm'
 import { HowItWorks } from '@/app/components/HowItWorks'
 import { Footer } from '@/app/components/Footer'
 import { UploadInputFile } from '@/app/components/UploadBox'
-import { ExpiryMinutes, UploadResponse } from '@/app/lib/types'
+import { MAX_TOTAL_UPLOAD_SIZE } from '@/app/lib/constants'
+import { ExpiryMinutes, UploadInitiateResponse, UploadResponse } from '@/app/lib/types'
+import { formatFileSize } from '@/app/lib/utils'
 
 export default function Home() {
   const [uploadStage, setUploadStage] = useState<'idle' | 'uploading' | 'processing'>('idle')
@@ -26,6 +29,11 @@ export default function Home() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'upload' | 'download'>('upload')
   const [prefillDownloadCode, setPrefillDownloadCode] = useState('')
+  const selectedTotalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0)
+  const remainingUploadBytes = Math.max(0, MAX_TOTAL_UPLOAD_SIZE - selectedTotalSize)
+  const uploadUsagePercent =
+    selectedTotalSize > 0 ? Math.min(100, Math.round((selectedTotalSize / MAX_TOTAL_UPLOAD_SIZE) * 100)) : 0
+  const exceedsUploadLimit = selectedTotalSize > MAX_TOTAL_UPLOAD_SIZE
 
   // Handle URL code parameter for download
   useEffect(() => {
@@ -36,6 +44,108 @@ export default function Home() {
       setPrefillDownloadCode(codeFromUrl.toUpperCase())
     }
   }, [])
+
+  const sanitizeZipPath = (path: string) => {
+    const normalized = path.replace(/\\/g, '/').trim()
+    const segments = normalized
+      .split('/')
+      .map((segment) => segment.trim())
+      .filter((segment) => segment.length > 0 && segment !== '.' && segment !== '..')
+
+    return segments.join('/')
+  }
+
+  const addNumberSuffix = (filePath: string, suffixNumber: number) => {
+    const normalized = filePath.replace(/\\/g, '/')
+    const lastSlash = normalized.lastIndexOf('/')
+    const dirname = lastSlash >= 0 ? normalized.slice(0, lastSlash + 1) : ''
+    const basename = lastSlash >= 0 ? normalized.slice(lastSlash + 1) : normalized
+
+    const dotIndex = basename.lastIndexOf('.')
+    const hasExtension = dotIndex > 0
+    const name = hasExtension ? basename.slice(0, dotIndex) : basename
+    const extension = hasExtension ? basename.slice(dotIndex) : ''
+
+    return `${dirname}${name} (${suffixNumber})${extension}`
+  }
+
+  const buildUploadBlob = async (files: UploadInputFile[]) => {
+    if (files.length === 1) {
+      const singleFile = files[0]
+      return {
+        blob: singleFile,
+        fileCount: 1,
+      }
+    }
+
+    const zip = new JSZip()
+    const filenameCounter = new Map<string, number>()
+
+    for (const file of files) {
+      const fileBuffer = await file.arrayBuffer()
+      const relativePath = file.webkitRelativePath || file.path || file.name
+      const safePath = sanitizeZipPath(relativePath) || file.name
+
+      const currentCount = filenameCounter.get(safePath) ?? 0
+      filenameCounter.set(safePath, currentCount + 1)
+
+      const zipEntryPath = currentCount === 0 ? safePath : addNumberSuffix(safePath, currentCount + 1)
+      zip.file(zipEntryPath, fileBuffer)
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' })
+    return {
+      blob,
+      fileCount: files.length,
+    }
+  }
+
+  const uploadToPresignedUrl = (uploadUrl: string, blob: Blob, contentType: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const uploadXhr = new XMLHttpRequest()
+
+      uploadXhr.upload.addEventListener('progress', (e) => {
+        if (!e.lengthComputable) {
+          return
+        }
+
+        const progress = Math.round((e.loaded / e.total) * 100)
+        setUploadProgress(Math.min(99, progress))
+      })
+
+      uploadXhr.addEventListener('load', () => {
+        if (uploadXhr.status >= 200 && uploadXhr.status < 300) {
+          setUploadProgress(100)
+          resolve()
+          return
+        }
+
+        reject(new Error('Direct upload to storage failed'))
+      })
+
+      uploadXhr.addEventListener('error', () => reject(new Error('Network error during direct upload')))
+      uploadXhr.addEventListener('timeout', () => reject(new Error('Direct upload timed out')))
+      uploadXhr.addEventListener('abort', () => reject(new Error('Direct upload was cancelled')))
+
+      uploadXhr.timeout = 20 * 60 * 1000
+      uploadXhr.open('PUT', uploadUrl)
+      uploadXhr.setRequestHeader('Content-Type', contentType || 'application/octet-stream')
+      uploadXhr.send(blob)
+    })
+  }
+
+  const getErrorMessage = (payload: unknown, fallback: string) => {
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      'message' in payload &&
+      typeof (payload as { message?: unknown }).message === 'string'
+    ) {
+      return (payload as { message: string }).message
+    }
+
+    return fallback
+  }
 
   const handleFileSelect = (files: UploadInputFile[]) => {
     setSelectedFiles((prevFiles) => [...prevFiles, ...files])
@@ -64,98 +174,93 @@ export default function Home() {
       return
     }
 
+    if (exceedsUploadLimit) {
+      setUploadError(
+        `Selected files exceed the 1GB upload limit by ${formatFileSize(
+          selectedTotalSize - MAX_TOTAL_UPLOAD_SIZE
+        )}. Remove some files and try again.`
+      )
+      return
+    }
+
     setIsUploading(true)
-    setUploadStage('uploading')
+    setUploadStage('processing')
     setUploadError(null)
     setUploadProgress(0)
 
     try {
-      const formData = new FormData()
-      selectedFiles.forEach((file) => {
-        formData.append('files', file)
-        const relativePath = file.webkitRelativePath || file.path || file.name
-        formData.append('paths', relativePath)
-      })
-      formData.append('expiryMinutes', expiryMinutes.toString())
+      const uploadPayload = await buildUploadBlob(selectedFiles)
 
-      const xhr = new XMLHttpRequest()
-
-      // Track bytes sent; keep a small gap until server confirms completion.
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const rawProgress = Math.round((e.loaded / e.total) * 100)
-          const progress = Math.min(99, rawProgress)
-          setUploadProgress(progress)
-
-          if (rawProgress >= 100) {
-            setUploadStage('processing')
-          }
-        }
+      const initiateRes = await fetch('/api/upload/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: selectedFiles.map((file) => ({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            path: file.webkitRelativePath || file.path || file.name,
+          })),
+          expiryMinutes,
+        }),
       })
 
-      const parseResponseBody = () => {
-        try {
-          return JSON.parse(xhr.responseText)
-        } catch {
-          return null
-        }
+      let initiateBody: UploadInitiateResponse | { message?: string } | null = null
+      try {
+        initiateBody = await initiateRes.json()
+      } catch {
+        initiateBody = null
       }
 
-      await new Promise<void>((resolve) => {
-        xhr.addEventListener('load', () => {
-          const body = parseResponseBody()
+      if (!initiateRes.ok || !initiateBody || !('uploadUrl' in initiateBody)) {
+        const message = getErrorMessage(initiateBody, 'Failed to initialize upload')
+        throw new Error(message)
+      }
 
-          if (xhr.status === 201 && body) {
-            const response = body as UploadResponse
-            setUploadedCode(response.code)
-            setUploadResponse(response)
-            setSelectedFiles([])
-            setUploadProgress(100)
-            setUploadStage('idle')
-            resolve()
-            return
-          }
+      setUploadStage('uploading')
+      await uploadToPresignedUrl(
+        initiateBody.uploadUrl,
+        uploadPayload.blob,
+        initiateBody.mimeType || 'application/octet-stream'
+      )
 
-          if (xhr.status === 413) {
-            setUploadError('File is too large. Please upload files below 100MB each.')
-          } else {
-            const message =
-              (body && typeof body.message === 'string' && body.message) ||
-              xhr.statusText ||
-              'Upload failed'
-            setUploadError(message)
-          }
+      setUploadStage('processing')
 
-          setUploadProgress(0)
-          setUploadStage('idle')
-          resolve()
-        })
-
-        xhr.addEventListener('error', () => {
-          setUploadError('Network error during upload')
-          setUploadProgress(0)
-          setUploadStage('idle')
-          resolve()
-        })
-
-        xhr.addEventListener('timeout', () => {
-          setUploadError('Upload timed out. Please try again.')
-          setUploadProgress(0)
-          setUploadStage('idle')
-          resolve()
-        })
-
-        xhr.addEventListener('abort', () => {
-          setUploadError('Upload was cancelled')
-          setUploadProgress(0)
-          setUploadStage('idle')
-          resolve()
-        })
-
-        xhr.timeout = 180000
-        xhr.open('POST', '/api/upload')
-        xhr.send(formData)
+      const completeRes = await fetch('/api/upload/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code: initiateBody.code,
+          fileKey: initiateBody.fileKey,
+          filename: initiateBody.filename,
+          mimeType: initiateBody.mimeType,
+          fileSize: uploadPayload.blob.size,
+          fileCount: uploadPayload.fileCount,
+          expiryMinutes,
+        }),
       })
+
+      let completeBody: UploadResponse | { message?: string } | null = null
+      try {
+        completeBody = await completeRes.json()
+      } catch {
+        completeBody = null
+      }
+
+      if (!completeRes.ok || !completeBody || !('code' in completeBody)) {
+        const message = getErrorMessage(completeBody, 'Failed to finalize upload')
+        throw new Error(message)
+      }
+
+      setUploadedCode(completeBody.code)
+      setUploadResponse(completeBody)
+      setSelectedFiles([])
+      setUploadProgress(100)
+      setUploadStage('idle')
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Upload failed')
       setUploadProgress(0)
@@ -253,6 +358,65 @@ export default function Home() {
                       selectedFiles={selectedFiles}
                     />
 
+                    {selectedFiles.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: '14px',
+                          marginBottom: '20px',
+                          padding: '14px',
+                          borderRadius: '12px',
+                          border: exceedsUploadLimit ? '1px solid var(--red)' : '1px solid var(--line)',
+                          backgroundColor: exceedsUploadLimit
+                            ? 'rgba(220, 38, 38, 0.08)'
+                            : 'rgba(26, 86, 255, 0.04)',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '12px',
+                            marginBottom: '10px',
+                            fontSize: '12px',
+                            color: 'var(--ink2)',
+                          }}
+                        >
+                          <span>
+                            Upload allowance: {formatFileSize(remainingUploadBytes)} remaining of{' '}
+                            {formatFileSize(MAX_TOTAL_UPLOAD_SIZE)}
+                          </span>
+                          <span>{uploadUsagePercent}% used</span>
+                        </div>
+
+                        <div
+                          style={{
+                            height: '8px',
+                            width: '100%',
+                            borderRadius: '999px',
+                            backgroundColor: 'var(--line)',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${uploadUsagePercent}%`,
+                              height: '100%',
+                              borderRadius: '999px',
+                              backgroundColor: exceedsUploadLimit ? 'var(--red)' : 'var(--accent)',
+                              transition: 'width 220ms ease',
+                            }}
+                          />
+                        </div>
+
+                        {exceedsUploadLimit && (
+                          <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--red)' }}>
+                            Selected files are over limit by{' '}
+                            {formatFileSize(selectedTotalSize - MAX_TOTAL_UPLOAD_SIZE)}.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {uploadProgress > 0 && (
                       <div style={{ marginTop: '16px', marginBottom: '24px' }}>
                         <ProgressBar
@@ -301,7 +465,7 @@ export default function Home() {
 
                     <button
                       onClick={handleUpload}
-                      disabled={selectedFiles.length === 0 || isUploading}
+                      disabled={selectedFiles.length === 0 || isUploading || exceedsUploadLimit}
                       className="btn-primary upload-submit-btn"
                     >
                       {isUploading

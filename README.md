@@ -16,7 +16,7 @@ A production-ready, single-page file sharing application built with Next.js 15, 
 - 🗄️ Supabase for metadata storage
 - 🚀 Auto-delete expired files (cron-ready)
 - 📥 Download files by entering code
-- 📊 File size validation (max 100MB)
+- 📊 File size validation (max 1GB)
 - ✅ File type validation
 - 🎨 Clean, minimal UI
 - 📱 Fully responsive (mobile, tablet, desktop)
@@ -41,7 +41,8 @@ A production-ready, single-page file sharing application built with Next.js 15, 
 share-files/
 ├── app/
 │   ├── api/
-│   │   ├── upload/route.ts          # File upload handler
+│   │   ├── upload/initiate/route.ts # Presigned upload initialization
+│   │   ├── upload/complete/route.ts # Upload finalization + metadata save
 │   │   ├── get-file/route.ts        # File retrieval by code
 │   │   └── delete-expired/route.ts  # Cleanup endpoint
 │   ├── components/
@@ -184,15 +185,46 @@ npm start
 
 ## API Routes
 
-### POST /api/upload
-Upload a file and get a unique code.
+### POST /api/upload/initiate
+Initialize an upload and receive a presigned direct-upload URL.
 
 **Request:**
 ```
-Content-Type: multipart/form-data
+Content-Type: application/json
 
-file: <File object>
-expiryMinutes: "15" | "60" | "1440"
+{
+  "files": [{ "name": "file.mov", "size": 1234, "type": "video/quicktime", "path": "folder/file.mov" }],
+  "expiryMinutes": 60
+}
+```
+
+**Response (200):**
+```json
+{
+  "code": "ABCDEF",
+  "uploadUrl": "https://...",
+  "fileKey": "ABCDEF/sharefiles-ABCDEF.zip",
+  "filename": "sharefiles-ABCDEF.zip",
+  "mimeType": "application/zip",
+  "fileCount": 2,
+  "maxUploadSizeBytes": 1073741824
+}
+```
+
+### POST /api/upload/complete
+Finalize an upload after the browser PUTs directly to R2.
+
+**Request:**
+```json
+{
+  "code": "ABCDEF",
+  "fileKey": "ABCDEF/sharefiles-ABCDEF.zip",
+  "filename": "sharefiles-ABCDEF.zip",
+  "mimeType": "application/zip",
+  "fileSize": 1048576,
+  "fileCount": 2,
+  "expiryMinutes": 60
+}
 ```
 
 **Response (201):**
@@ -202,7 +234,8 @@ expiryMinutes: "15" | "60" | "1440"
   "expiresAt": "2025-03-26T06:30:00Z",
   "expiresIn": 60,
   "fileSize": 1048576,
-  "filename": "document.pdf"
+  "filename": "sharefiles-ABCDEF.zip",
+  "fileCount": 2
 }
 ```
 
@@ -237,7 +270,7 @@ Retrieve file metadata and download URL.
 ```
 
 ### POST /api/delete-expired
-Clean up expired files (requires Bearer token).
+Clean up expired files and orphan R2 uploads (requires Bearer token).
 
 **Request:**
 ```
@@ -247,8 +280,10 @@ Authorization: Bearer <CLEANUP_API_SECRET>
 **Response (200):**
 ```json
 {
-  "message": "Cleanup completed. Deleted 5 files.",
+  "message": "Cleanup completed. Deleted 5 expired files and 2 orphan objects.",
   "deleted_count": 5,
+  "orphan_deleted_count": 2,
+  "scanned_objects": 123,
   "status": "success"
 }
 ```
@@ -259,7 +294,7 @@ Files are automatically scheduled for deletion when they expire. To set up autom
 
 ### Using Vercel Cron
 
-This repo includes `vercel.json` with a cron job that calls `/api/delete-expired` every 15 minutes.
+This repo includes `vercel.json` with a cron job that calls `/api/delete-expired` once daily.
 
 Set both environment variables in your Vercel project:
 
@@ -319,7 +354,7 @@ Supported MIME types include:
 - **Audio:** MP3, WAV, MP4, WebM
 - **Video:** MP4, WebM, MOV, AVI
 
-Max file size: **100MB**
+Max file size: **1GB**
 
 ## Dark Mode
 

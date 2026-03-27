@@ -1,6 +1,7 @@
 'use client'
 
 import { Download } from 'lucide-react'
+import QRCodeStyling from 'qr-code-styling'
 import { useEffect, useMemo, useRef } from 'react'
 
 interface QRCodeDisplayProps {
@@ -33,11 +34,10 @@ export function QRCodeDisplay({ code }: QRCodeDisplayProps) {
   useEffect(() => {
     let isMounted = true
     const container = qrRef.current
+    const QRCodeStylingClass = QRCodeStyling as unknown as QRCodeStylingCtor
 
-    const renderQr = async () => {
+    const renderQr = () => {
       if (!container) return
-      const { default: QRCodeStyling } = await import('qr-code-styling')
-      const QRCodeStylingClass = QRCodeStyling as unknown as QRCodeStylingCtor
       if (!isMounted) return
 
       if (!qrCodeRef.current) {

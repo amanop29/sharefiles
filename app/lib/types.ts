@@ -9,6 +9,16 @@ export interface UploadResponse {
   fileCount: number
 }
 
+export interface UploadInitiateResponse {
+  code: string
+  uploadUrl: string
+  fileKey: string
+  filename: string
+  mimeType: string
+  fileCount: number
+  maxUploadSizeBytes: number
+}
+
 export interface DownloadResponse {
   downloadUrl: string
   filename: string

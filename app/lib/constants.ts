@@ -1,6 +1,7 @@
 // Constants for the ShareFiles app
 
-export const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
+export const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB per file
+export const MAX_TOTAL_UPLOAD_SIZE = 1024 * 1024 * 1024 // 1GB per upload
 
 export const ALLOWED_FILE_TYPES = [
   // Documents
@@ -81,6 +82,46 @@ export const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 
 // Extensions that should be accepted even when browsers send generic/empty MIME types.
 export const ALLOWED_FILE_EXTENSIONS = [
+  // Documents and office files
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'txt',
+  'csv',
+  'rtf',
+
+  // Archives
+  'zip',
+  'rar',
+  '7z',
+  'gz',
+  'tgz',
+  'tar',
+  'bz2',
+
+  // Images
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'webp',
+  'svg',
+  'heic',
+
+  // Audio
+  'mp3',
+  'wav',
+  'm4a',
+
+  // Video
+  'mp4',
+  'mov',
+  'avi',
+
   // Code and markup
   'py',
   'pyc',
