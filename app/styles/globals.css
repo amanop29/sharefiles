@@ -302,6 +302,16 @@ html.dark input[type="file"] {
   margin-bottom: 16px;
 }
 
+.drop-zone-folder-note {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.drop-zone-folder-note-outside {
+  margin-top: 8px;
+  text-align: center;
+}
+
 .drop-zone-hint {
   font-size: 11px;
   color: var(--ink3);
@@ -314,6 +324,16 @@ html.dark input[type="file"] {
 
 .drop-zone-hint span {
   display: inline;
+}
+
+.upload-box-has-files {
+  text-align: left;
+}
+
+.upload-selection-summary {
+  font-size: 12px;
+  color: var(--ink3);
+  margin-bottom: 8px;
 }
 
 /* File pill/row */

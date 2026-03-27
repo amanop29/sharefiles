@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { ChevronDown, ChevronRight, Folder, Upload, X } from 'lucide-react'
 import { formatFileSize } from '@/app/lib/utils'
@@ -112,6 +112,7 @@ export function UploadBox({
 }: UploadBoxProps) {
   const totalSize = selectedFiles.reduce((acc, file) => acc + file.size, 0)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const treeNodes = useMemo(() => buildTree(selectedFiles), [selectedFiles])
   const INDENT_SIZE = 8
 
@@ -136,10 +137,22 @@ export function UploadBox({
     [onFileSelect]
   )
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const handleFileSelect = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? []) as UploadInputFile[]
+      if (files.length > 0) {
+        onFileSelect(files)
+      }
+      event.target.value = ''
+    },
+    [onFileSelect]
+  )
+
+  const { getRootProps, isDragActive } = useDropzone({
     onDrop,
     disabled,
     multiple: true,
+    noClick: true,
   })
 
   const renderNodes = (nodes: TreeNode[], depth = 0) => {
@@ -229,78 +242,91 @@ export function UploadBox({
   }
 
   return (
-    <div
-      {...getRootProps()}
-      className={`drop-zone ${isDragActive ? 'drag-over' : ''}`}
-      style={{
-        opacity: disabled ? 0.6 : 1,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-      }}
-    >
-      <input
-        {...getInputProps()}
-      />
+    <>
+      <div
+        {...getRootProps()}
+        className={`drop-zone ${isDragActive ? 'drag-over' : ''}`}
+        style={{
+          opacity: disabled ? 0.6 : 1,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+        }}
+        onClick={() => {
+          if (!disabled) {
+            fileInputRef.current?.click()
+          }
+        }}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          hidden
+          onChange={handleFileSelect}
+          disabled={disabled}
+        />
 
-      {selectedFiles.length > 0 ? (
-        <div style={{ textAlign: 'left' }}>
-          {/* File pills */}
-          <div
-            className="upload-stack-scroll"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-            }}
-          >
-            {renderNodes(treeNodes)}
+        {selectedFiles.length > 0 ? (
+          <div className="upload-box-has-files">
+            <div
+              className="upload-stack-scroll"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            >
+              {renderNodes(treeNodes)}
+            </div>
+
+            <button
+              type="button"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--accent)',
+                fontSize: '14px',
+                fontWeight: '500',
+                textDecoration: 'underline',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                marginBottom: '16px',
+              }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                if (!disabled) {
+                  fileInputRef.current?.click()
+                }
+              }}
+              disabled={disabled}
+            >
+              + Add more files
+            </button>
+
+            <p className="upload-selection-summary">
+              {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} • {formatFileSize(totalSize)}
+            </p>
           </div>
+        ) : (
+          <div>
+            <div className="drop-zone-icon">
+              <Upload />
+            </div>
 
-          {/* Add more files link */}
-          <button
-            type="button"
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--accent)',
-              fontSize: '14px',
-              fontWeight: '500',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              marginBottom: '16px',
-            }}
-          >
-            + Add more files
-          </button>
+            <h3 className="drop-zone-title">Drop your folder & files here</h3>
 
-          {/* Summary */}
-          <p style={{
-            fontSize: '12px',
-            color: 'var(--ink3)',
-            marginBottom: '8px',
-          }}>
-            {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} • {formatFileSize(totalSize)}
-          </p>
-        </div>
-      ) : (
-        <div>
-          {/* Drop zone icon */}
-          <div className="drop-zone-icon">
-            <Upload />
+            <p className="drop-zone-subtitle">or click to browse files</p>
+
+            <div className="drop-zone-hint">
+              <span>·</span>
+              <span>Any format</span>
+              <span>·</span>
+            </div>
           </div>
+        )}
+      </div>
 
-          {/* Drop zone title */}
-          <h3 className="drop-zone-title">Drop your folder & files here</h3>
-
-          {/* Drop zone subtitle */}
-          <p className="drop-zone-subtitle">or click to browse</p>
-
-          {/* Drop zone hint */}
-          <div className="drop-zone-hint">
-            <span>·</span>
-            <span>Any format</span>
-            <span>·</span>
-          </div>
-        </div>
-      )}
-    </div>
+      <p className="drop-zone-subtitle drop-zone-folder-note drop-zone-folder-note-outside">
+        To upload folder (drag and drop here)*
+      </p>
+    </>
   )
 }
