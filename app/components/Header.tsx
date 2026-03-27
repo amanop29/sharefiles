@@ -1,18 +1,71 @@
 'use client'
 
+import Link from 'next/link'
 import { ThemeToggle } from './ThemeToggle'
 
-export function Header() {
+interface HeaderProps {
+  onGoToUpload?: () => void
+}
+
+export function Header({ onGoToUpload }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
-            ShareFiles
-          </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Anonymous file sharing</p>
+    <header
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        height: '64px',
+        borderBottom: '1px solid var(--border)',
+        backdropFilter: 'blur(12px)',
+        backgroundColor: 'color-mix(in srgb, var(--paper) 82%, transparent)',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '1200px',
+          margin: '0 auto',
+          height: '100%',
+          padding: '0 40px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+        }}
+      >
+        <Link
+          href="/"
+          onClick={onGoToUpload}
+          style={{ display: 'flex', alignItems: 'baseline', gap: '2px', textDecoration: 'none' }}
+          aria-label="Go to upload"
+        >
+          <span
+            style={{
+              fontFamily: 'Instrument Serif, serif',
+              fontSize: '38px',
+              letterSpacing: '-0.02em',
+              color: 'var(--ink)',
+              lineHeight: 1,
+            }}
+          >
+            Share
+          </span>
+          <span
+            style={{
+              fontFamily: 'Instrument Serif, serif',
+              fontSize: '38px',
+              fontStyle: 'italic',
+              letterSpacing: '-0.02em',
+              color: 'var(--accent)',
+              lineHeight: 1,
+            }}
+          >
+            Files
+          </span>
+        </Link>
+
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <ThemeToggle />
         </div>
-        <ThemeToggle />
       </div>
     </header>
   )

@@ -2,8 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { ChevronDown, ChevronRight, File as FileIcon, Folder, Trash2, Upload, X } from 'lucide-react'
-import clsx from 'clsx'
+import { ChevronDown, ChevronRight, Folder, Upload, X } from 'lucide-react'
 import { formatFileSize } from '@/app/lib/utils'
 
 export type UploadInputFile = File & {
@@ -104,10 +103,17 @@ function buildTree(files: UploadInputFile[]): TreeNode[] {
   return sortNodes(root.children)
 }
 
-export function UploadBox({ onFileSelect, onRemoveFile, onRemoveFolder, disabled, selectedFiles }: UploadBoxProps) {
+export function UploadBox({
+  onFileSelect,
+  onRemoveFile,
+  onRemoveFolder,
+  disabled,
+  selectedFiles,
+}: UploadBoxProps) {
   const totalSize = selectedFiles.reduce((acc, file) => acc + file.size, 0)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const treeNodes = useMemo(() => buildTree(selectedFiles), [selectedFiles])
+  const INDENT_SIZE = 8
 
   const toggleFolder = (path: string) => {
     setExpandedFolders((prev) => {
@@ -141,36 +147,44 @@ export function UploadBox({ onFileSelect, onRemoveFile, onRemoveFolder, disabled
       if (node.type === 'folder') {
         const isExpanded = expandedFolders.has(node.path)
         return (
-          <div key={node.path} className="space-y-1">
+          <div key={node.path}>
             <div
-              className="w-full flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-200/70 dark:hover:bg-gray-800/70"
-              style={{ paddingLeft: `${depth * 16 + 8}px` }}
+              className="file-pill"
+              style={{
+                marginLeft: `${depth * INDENT_SIZE}px`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: 'calc(100% - ' + depth * INDENT_SIZE + 'px)',
+                cursor: 'pointer',
+              }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                toggleFolder(node.path)
+              }}
             >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                {isExpanded ? (
+                  <ChevronDown className="upload-tree-chevron" />
+                ) : (
+                  <ChevronRight className="upload-tree-chevron" />
+                )}
+                <span className="upload-tree-folder-name">
+                  <Folder className="upload-tree-folder-icon" />
+                  {node.name}
+                </span>
+              </div>
               <button
                 type="button"
-                className="min-w-0 flex-1 flex items-center gap-1.5 text-left"
                 onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  toggleFolder(node.path)
-                }}
-              >
-                {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                <Folder className="w-3.5 h-3.5 text-blue-500" />
-                <span className="truncate">{node.name}</span>
-              </button>
-              <button
-                type="button"
-                aria-label={`Remove folder ${node.name}`}
-                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-300"
-                onClick={(e) => {
-                  e.preventDefault()
                   e.stopPropagation()
                   onRemoveFolder(node.path)
                 }}
                 disabled={disabled}
+                className="file-pill-remove"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <X className="upload-tree-action-icon" />
               </button>
             </div>
             {isExpanded && <div>{renderNodes(node.children, depth + 1)}</div>}
@@ -181,17 +195,25 @@ export function UploadBox({ onFileSelect, onRemoveFile, onRemoveFolder, disabled
       return (
         <div
           key={`${node.path}-${node.index}`}
-          className="flex items-center justify-between gap-2 px-2 py-1 rounded-md bg-gray-100/70 dark:bg-gray-900/60"
-          style={{ marginLeft: `${depth * 16}px` }}
+          className="file-pill"
+          style={{
+            marginLeft: `${depth * INDENT_SIZE}px`,
+            width: 'calc(100% - ' + depth * INDENT_SIZE + 'px)',
+          }}
         >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <FileIcon className="w-3.5 h-3.5 text-gray-500" />
-            <p className="truncate text-left">{node.name}</p>
+          <div className="file-pill-icon">
+            <Upload className="upload-tree-file-icon" />
           </div>
+
+          <div className="file-pill-info">
+            <div className="file-pill-name">{node.name}</div>
+            <div className="file-pill-size">{formatFileSize(selectedFiles[node.index].size)}</div>
+          </div>
+
           <button
             type="button"
             aria-label={`Remove ${node.name}`}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-300"
+            className="file-pill-remove"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -199,7 +221,7 @@ export function UploadBox({ onFileSelect, onRemoveFile, onRemoveFolder, disabled
             }}
             disabled={disabled}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="upload-tree-action-icon" />
           </button>
         </div>
       )
@@ -209,13 +231,11 @@ export function UploadBox({ onFileSelect, onRemoveFile, onRemoveFolder, disabled
   return (
     <div
       {...getRootProps()}
-      className={clsx(
-        'border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200',
-        isDragActive
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-400'
-          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-900/50',
-        disabled && 'opacity-50 cursor-not-allowed'
-      )}
+      className={`drop-zone ${isDragActive ? 'drag-over' : ''}`}
+      style={{
+        opacity: disabled ? 0.6 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
     >
       <input
         {...getInputProps({
@@ -224,38 +244,65 @@ export function UploadBox({ onFileSelect, onRemoveFile, onRemoveFolder, disabled
           ...( { directory: '' } as unknown as Record<string, string> ),
         })}
       />
-      
+
       {selectedFiles.length > 0 ? (
-        <div className="space-y-2">
-          <div className="w-12 h-12 mx-auto bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-            <Upload className="w-6 h-6 text-green-600 dark:text-green-400" />
-          </div>
-          <p className="font-semibold text-gray-900 dark:text-gray-50">
-            {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {formatFileSize(totalSize)} total
-          </p>
-          <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1 max-h-48 overflow-y-auto">
+        <div style={{ textAlign: 'left' }}>
+          {/* File pills */}
+          <div
+            className="upload-stack-scroll"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
+          >
             {renderNodes(treeNodes)}
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Same-name files are auto-renamed internally as (2), (3), ...
+
+          {/* Add more files link */}
+          <button
+            type="button"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent)',
+              fontSize: '14px',
+              fontWeight: '500',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              marginBottom: '16px',
+            }}
+          >
+            + Add more files
+          </button>
+
+          {/* Summary */}
+          <p style={{
+            fontSize: '12px',
+            color: 'var(--ink3)',
+            marginBottom: '8px',
+          }}>
+            {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} • {formatFileSize(totalSize)}
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Drag a folder or click to add files/folders</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          <div className="w-12 h-12 mx-auto bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-            <Upload className="w-6 h-6 text-gray-400 dark:text-gray-600" />
+        <div>
+          {/* Drop zone icon */}
+          <div className="drop-zone-icon">
+            <Upload />
           </div>
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-gray-50">
-              Drag & drop files or a folder here
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">or click to browse files/folders</p>
+
+          {/* Drop zone title */}
+          <h3 className="drop-zone-title">Drop your folder & files here</h3>
+
+          {/* Drop zone subtitle */}
+          <p className="drop-zone-subtitle">or click to browse</p>
+
+          {/* Drop zone hint */}
+          <div className="drop-zone-hint">
+            <span>·</span>
+            <span>Any format</span>
+            <span>·</span>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Max 100MB per file • Add files in multiple steps</p>
         </div>
       )}
     </div>

@@ -34,19 +34,37 @@ export function ThemeToggle() {
   }
 
   if (!mounted) {
-    return <div className="w-10 h-10" />
+    return <div style={{ width: '40px', height: '40px' }} />
   }
 
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+      style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        backgroundColor: 'var(--paper2)',
+        border: '1.5px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--paper3)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--paper2)'
+      }}
       aria-label="Toggle theme"
     >
       {isDark ? (
-        <Sun className="w-5 h-5 text-yellow-500" />
+        <Sun style={{ width: '20px', height: '20px', color: 'var(--amber)' }} />
       ) : (
-        <Moon className="w-5 h-5 text-gray-700" />
+        <Moon style={{ width: '20px', height: '20px', color: 'var(--ink)' }} />
       )}
     </button>
   )

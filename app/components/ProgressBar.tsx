@@ -3,20 +3,62 @@
 interface ProgressBarProps {
   progress: number
   isVisible?: boolean
+  stageText?: string
+  statusText?: string
+  isIndeterminate?: boolean
 }
 
-export function ProgressBar({ progress, isVisible = true }: ProgressBarProps) {
+export function ProgressBar({
+  progress,
+  isVisible = true,
+  stageText,
+  statusText,
+  isIndeterminate = false,
+}: ProgressBarProps) {
   if (!isVisible) return null
 
   return (
-    <div className="w-full space-y-2">
-      <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+    <div style={{ width: '100%' }}>
+      {stageText && (
+        <p 
+          style={{
+            fontSize: '11px',
+            letterSpacing: '0.08em',
+            color: 'var(--ink3)',
+            textAlign: 'center',
+            textTransform: 'uppercase',
+            marginBottom: '8px',
+          }}
+        >
+          {stageText}
+        </p>
+      )}
+      
+      <div className="progress-bar">
         <div
-          className="h-full bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 transition-all duration-300"
-          style={{ width: `${progress}%` }}
+          className="progress-bar-fill"
+          style={{ 
+            width: `${progress}%`,
+            animation: isIndeterminate ? 'pulse 2s ease-in-out infinite' : 'none',
+          }}
         />
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400 text-center">{Math.round(progress)}%</p>
+      
+      <p className="progress-label">{Math.round(progress)}%</p>
+      
+      {statusText && (
+        <p 
+          style={{
+            fontSize: '12px',
+            color: 'var(--ink3)',
+            textAlign: 'center',
+            marginTop: '8px',
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        >
+          {statusText}
+        </p>
+      )}
     </div>
   )
 }

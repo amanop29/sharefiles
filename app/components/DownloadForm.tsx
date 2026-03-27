@@ -1,10 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Download } from 'lucide-react'
+import { Download, FileIcon, Check } from 'lucide-react'
 import { isValidCodeFormat } from '@/app/lib/codeGenerator'
 import { formatFileSize, getTimeRemaining } from '@/app/lib/utils'
-import clsx from 'clsx'
 
 interface DownloadFormProps {
   onDownload: (code: string) => Promise<void>
@@ -54,6 +53,8 @@ export function DownloadForm({ onDownload, initialCode }: DownloadFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileData, setFileData] = useState<FileData | null>(null)
+  const [downloading, setDownloading] = useState(false)
+  const [downloaded, setDownloaded] = useState(false)
   const [, setNow] = useState(Date.now())
 
   const lookupCode = useCallback(async (inputCode: string) => {
@@ -124,12 +125,19 @@ export function DownloadForm({ onDownload, initialCode }: DownloadFormProps) {
     await lookupCode(code)
   }
 
-  const handleDirectDownload = () => {
-    if (fileData) {
+  const handleDirectDownload = async () => {
+    if (fileData && !downloading) {
+      setDownloading(true)
       const link = document.createElement('a')
       link.href = fileData.downloadUrl
       link.download = fileData.filename
       link.click()
+      
+      setDownloaded(true)
+      setTimeout(() => {
+        setDownloading(false)
+        setDownloaded(false)
+      }, 2500)
     }
   }
 
@@ -137,41 +145,66 @@ export function DownloadForm({ onDownload, initialCode }: DownloadFormProps) {
     const timeRemaining = getTimeRemaining(new Date(fileData.expiresAt))
     
     return (
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-50">Ready to Download</h3>
-        
-        <div className="bg-white dark:bg-gray-900 rounded-lg p-4 space-y-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Filename</p>
-          <p className="font-medium text-gray-900 dark:text-gray-50 break-all">{fileData.filename}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(fileData.fileSize)}</p>
+      <div style={{ marginBottom: '24px' }}>
+        {/* Download result card */}
+        <div className="download-result-card">
+          <div className="download-result-file-icon">
+            <FileIcon />
+          </div>
+          
+          <div className="download-result-info">
+            <div className="download-result-filename">{fileData.filename}</div>
+            <div className="download-result-meta">
+              <span>{formatFileSize(fileData.fileSize)}</span>
+              <div className="download-result-meta-expiry">
+                <span>Expires in {timeRemaining.text}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDirectDownload}
+            disabled={downloading}
+            className={`download-result-button ${downloaded ? 'downloading' : ''}`}
+            style={{
+              backgroundColor: downloaded ? 'var(--green)' : 'var(--accent)',
+              color: 'white',
+            }}
+          >
+            {downloaded ? (
+              <>
+                <Check style={{ width: '16px', height: '16px' }} />
+                Downloaded!
+              </>
+            ) : (
+              <>
+                <Download style={{ width: '16px', height: '16px' }} />
+                Download
+              </>
+            )}
+          </button>
         </div>
 
-        <div className="text-sm">
-          <p className="text-gray-600 dark:text-gray-400">
-            Expires in <span className={clsx(
-              'font-semibold',
-              timeRemaining.isExpired ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'
-            )}>
-              {timeRemaining.text}
-            </span>
-          </p>
-        </div>
-
-        <button
-          onClick={handleDirectDownload}
-          className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
-        >
-          <Download className="w-5 h-5" />
-          Download Now
-        </button>
-
+        {/* Search another code link */}
         <button
           onClick={() => {
             setCode('')
             setFileData(null)
             setError(null)
+            setDownloaded(false)
           }}
-          className="w-full px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-sm"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--accent)',
+            textAlign: 'center',
+            width: '100%',
+            paddingTop: '16px',
+            fontFamily: `'DM Sans', sans-serif`,
+            fontSize: '14px',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
         >
           Search Another Code
         </button>
@@ -180,13 +213,9 @@ export function DownloadForm({ onDownload, initialCode }: DownloadFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Enter Download Code or Link
-        </label>
+    <form onSubmit={handleSubmit}>
+      <div className="download-form">
         <input
-          id="code"
           type="text"
           value={code}
           onChange={(e) => {
@@ -194,35 +223,41 @@ export function DownloadForm({ onDownload, initialCode }: DownloadFormProps) {
             setError(null)
           }}
           placeholder="ABCDEF"
-          className={clsx(
-            'w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors',
-            'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-50',
-            error
-              ? 'border-red-300 dark:border-red-700'
-              : 'border-gray-300 dark:border-gray-700'
-          )}
+          disabled={loading}
+          style={{
+            opacity: loading ? 0.6 : 1,
+          }}
         />
+        
+        <button
+          type="submit"
+          disabled={loading || code.trim().length < 4}
+          className="btn-small"
+          style={{
+            backgroundColor: (loading || code.trim().length < 4) ? 'var(--paper3)' : 'var(--ink)',
+            color: (loading || code.trim().length < 4) ? 'var(--ink3)' : 'var(--paper)',
+            cursor: (loading || code.trim().length < 4) ? 'not-allowed' : 'pointer',
+            padding: '12px 24px',
+          }}
+        >
+          <Download style={{ width: '16px', height: '16px' }} />
+          {loading ? 'Searching...' : 'Search'}
+        </button>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+        <div style={{
+          marginTop: '12px',
+          padding: '12px 16px',
+          backgroundColor: 'rgba(220, 38, 38, 0.1)',
+          border: '1px solid var(--red)',
+          borderRadius: '12px',
+          fontSize: '14px',
+          color: 'var(--red)',
+        }}>
           {error}
-        </p>
+        </div>
       )}
-
-      <button
-        type="submit"
-        disabled={loading || !code.trim()}
-        className={clsx(
-          'w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2',
-          loading || !code.trim()
-            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white'
-        )}
-      >
-        <Download className="w-5 h-5" />
-        {loading ? 'Searching...' : 'Search'}
-      </button>
     </form>
   )
 }

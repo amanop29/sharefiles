@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!expiryMinutes || !['15', '60', '1440'].includes(expiryMinutes)) {
+    if (!expiryMinutes || !['15', '60', '1440', '10080'].includes(expiryMinutes)) {
       return NextResponse.json(
         { code: 'INVALID_EXPIRY', message: 'Invalid expiry minutes' } as UploadError,
         { status: 400 }

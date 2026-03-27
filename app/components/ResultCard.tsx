@@ -1,6 +1,6 @@
 'use client'
 
-import { Copy, Check } from 'lucide-react'
+import { Copy, Check, Clock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { copyToClipboard, getTimeRemaining } from '@/app/lib/utils'
 
@@ -14,17 +14,15 @@ interface ResultCardProps {
 export function ResultCard({ code, filename, expiresAt, onReset }: ResultCardProps) {
   const [copiedCode, setCopiedCode] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
-  const [, setNow] = useState(Date.now())
+  const [remaining, setRemaining] = useState(() => getTimeRemaining(new Date(expiresAt)))
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      setNow(Date.now())
+      setRemaining(getTimeRemaining(new Date(expiresAt)))
     }, 1000)
 
     return () => window.clearInterval(intervalId)
-  }, [])
-
-  const remaining = getTimeRemaining(new Date(expiresAt))
+  }, [expiresAt])
 
   const handleCopyCode = async () => {
     const success = await copyToClipboard(code)
@@ -44,64 +42,70 @@ export function ResultCard({ code, filename, expiresAt, onReset }: ResultCardPro
   }
 
   return (
-    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border border-green-200 dark:border-green-800 rounded-2xl p-8 space-y-6">
-      <div className="text-center space-y-2">
-        <p className="text-sm font-medium text-green-600 dark:text-green-400">✓ File uploaded successfully!</p>
-        <p className="text-gray-600 dark:text-gray-400">{filename}</p>
+    <div className="result-card">
+      {/* Header */}
+      <div className="result-card-header">
+        <div className="result-card-icon">
+          <Check />
+        </div>
+        <h3 className="result-card-heading">{filename} uploaded</h3>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Share Code</label>
-        <div className="flex gap-2">
-          <code className="flex-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 font-mono text-2xl font-bold text-center text-blue-600 dark:text-blue-400">
-            {code}
-          </code>
+      {/* Code section */}
+      <div style={{ marginBottom: '24px' }}>
+        <label className="result-card-label">Share Code</label>
+        <div className="result-code-row">
+          <div className="result-code-box">{code}</div>
           <button
+            type="button"
             onClick={handleCopyCode}
-            className="px-4 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg transition-colors"
+            className={`btn-copy-icon ${copiedCode ? 'copied' : ''}`}
+            aria-label={copiedCode ? 'Code copied' : 'Copy share code'}
+            title={copiedCode ? 'Copied' : 'Copy code'}
           >
-            {copiedCode ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            {copiedCode ? (
+              <Check style={{ width: '16px', height: '16px' }} />
+            ) : (
+              <Copy style={{ width: '16px', height: '16px' }} />
+            )}
           </button>
+        </div>
+
+        <p className="result-help-text">Share the code or link with others to download</p>
+
+        <label className="result-card-label" style={{ marginTop: '14px' }}>Download Link</label>
+        <div className="result-link-button-wrap">
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="btn-secondary btn-small"
+            style={{ width: '100%' }}
+          >
+            {copiedLink ? (
+              <>
+                <Check style={{ width: '16px', height: '16px' }} />
+                Link Copied!
+              </>
+            ) : (
+              <>
+                <Copy style={{ width: '16px', height: '16px' }} />
+                Copy download link
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Expiry info */}
+        <div className="result-expiry">
+          <Clock />
+          <span>Expires in {remaining.text}</span>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Download Link</label>
-        <button
-          onClick={handleCopyLink}
-          className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
-        >
-          {copiedLink ? (
-            <>
-              <Check className="w-4 h-4" />
-              Link copied!
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              Copy download link
-            </>
-          )}
-        </button>
-      </div>
-
-      <div className="text-center space-y-2">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Expires in{' '}
-          <span
-            className={`font-semibold ${
-              remaining.isExpired ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'
-            }`}
-          >
-            {remaining.text}
-          </span>
-        </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">Share the code or link with others to download</p>
-      </div>
-
+      {/* Reset button */}
       <button
         onClick={onReset}
-        className="w-full px-4 py-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
+        className="btn-secondary"
       >
         Upload Another File
       </button>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Header } from '@/app/components/Header'
+import { Hero } from '@/app/components/Hero'
+import { MainContent } from '@/app/components/MainContent'
 import { UploadBox } from '@/app/components/UploadBox'
 import { ExpirySelector } from '@/app/components/ExpirySelector'
 import { ProgressBar } from '@/app/components/ProgressBar'
@@ -14,6 +16,7 @@ import { UploadInputFile } from '@/app/components/UploadBox'
 import { ExpiryMinutes, UploadResponse } from '@/app/lib/types'
 
 export default function Home() {
+  const [uploadStage, setUploadStage] = useState<'idle' | 'uploading' | 'processing'>('idle')
   const [selectedFiles, setSelectedFiles] = useState<UploadInputFile[]>([])
   const [expiryMinutes, setExpiryMinutes] = useState<ExpiryMinutes>(60)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -62,6 +65,7 @@ export default function Home() {
     }
 
     setIsUploading(true)
+    setUploadStage('uploading')
     setUploadError(null)
     setUploadProgress(0)
 
@@ -76,38 +80,86 @@ export default function Home() {
 
       const xhr = new XMLHttpRequest()
 
-      // Track upload progress
+      // Track bytes sent; keep a small gap until server confirms completion.
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
-          const progress = Math.round((e.loaded / e.total) * 100)
+          const rawProgress = Math.round((e.loaded / e.total) * 100)
+          const progress = Math.min(99, rawProgress)
           setUploadProgress(progress)
+
+          if (rawProgress >= 100) {
+            setUploadStage('processing')
+          }
         }
       })
 
-      xhr.addEventListener('load', () => {
-        if (xhr.status === 201) {
-          const response = JSON.parse(xhr.responseText) as UploadResponse
-          setUploadedCode(response.code)
-          setUploadResponse(response)
-          setSelectedFiles([])
-          setUploadProgress(0)
-        } else {
-          const error = JSON.parse(xhr.responseText)
-          setUploadError(error.message || 'Upload failed')
-          setUploadProgress(0)
+      const parseResponseBody = () => {
+        try {
+          return JSON.parse(xhr.responseText)
+        } catch {
+          return null
         }
-      })
+      }
 
-      xhr.addEventListener('error', () => {
-        setUploadError('Network error during upload')
-        setUploadProgress(0)
-      })
+      await new Promise<void>((resolve) => {
+        xhr.addEventListener('load', () => {
+          const body = parseResponseBody()
 
-      xhr.open('POST', '/api/upload')
-      xhr.send(formData)
+          if (xhr.status === 201 && body) {
+            const response = body as UploadResponse
+            setUploadedCode(response.code)
+            setUploadResponse(response)
+            setSelectedFiles([])
+            setUploadProgress(100)
+            setUploadStage('idle')
+            resolve()
+            return
+          }
+
+          if (xhr.status === 413) {
+            setUploadError('File is too large. Please upload files below 100MB each.')
+          } else {
+            const message =
+              (body && typeof body.message === 'string' && body.message) ||
+              xhr.statusText ||
+              'Upload failed'
+            setUploadError(message)
+          }
+
+          setUploadProgress(0)
+          setUploadStage('idle')
+          resolve()
+        })
+
+        xhr.addEventListener('error', () => {
+          setUploadError('Network error during upload')
+          setUploadProgress(0)
+          setUploadStage('idle')
+          resolve()
+        })
+
+        xhr.addEventListener('timeout', () => {
+          setUploadError('Upload timed out. Please try again.')
+          setUploadProgress(0)
+          setUploadStage('idle')
+          resolve()
+        })
+
+        xhr.addEventListener('abort', () => {
+          setUploadError('Upload was cancelled')
+          setUploadProgress(0)
+          setUploadStage('idle')
+          resolve()
+        })
+
+        xhr.timeout = 180000
+        xhr.open('POST', '/api/upload')
+        xhr.send(formData)
+      })
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Upload failed')
       setUploadProgress(0)
+      setUploadStage('idle')
     } finally {
       setIsUploading(false)
     }
@@ -120,36 +172,57 @@ export default function Home() {
     setUploadError(null)
     setUploadProgress(0)
     setExpiryMinutes(60)
+    setUploadStage('idle')
   }
 
   const handleDownload = async () => {
     // File data is fetched in DownloadForm component
   }
 
-  return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50">
-      <Header />
+  const handleNewUpload = () => {
+    handleReset()
+    setActiveTab('upload')
+    setPrefillDownloadCode('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/')
+    }
+  }
 
-      <main className="max-w-4xl mx-auto px-4 py-16 space-y-16">
+  const handleGoToUpload = () => {
+    handleReset()
+    setActiveTab('upload')
+    setPrefillDownloadCode('')
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/')
+    }
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--paper)' }}>
+      <Header onGoToUpload={handleGoToUpload} />
+
+      <Hero />
+
+      <MainContent>
         {/* Tab Navigation */}
-        <div className="flex gap-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="tabs fade-up fade-up-delay-1">
           <button
             onClick={() => setActiveTab('upload')}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-              activeTab === 'upload'
-                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-50'
-            }`}
+            className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
           >
-            Upload
+            {uploadedCode ? 'Code' : 'Upload'}
           </button>
+          {uploadedCode && (
+            <button
+              onClick={handleNewUpload}
+              className="tab"
+            >
+              New Upload
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('download')}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-              activeTab === 'download'
-                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-50'
-            }`}
+            className={`tab ${activeTab === 'download' ? 'active' : ''}`}
           >
             Download
           </button>
@@ -157,9 +230,9 @@ export default function Home() {
 
         {/* Upload Section */}
         {activeTab === 'upload' && (
-          <section className="space-y-8">
+          <section style={{ marginBottom: '64px' }} className="fade-up fade-up-delay-2">
             {uploadedCode && uploadResponse ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="upload-result-layout">
                 <ResultCard
                   code={uploadedCode}
                   filename={uploadResponse.filename}
@@ -170,39 +243,104 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <UploadBox
-                  onFileSelect={handleFileSelect}
-                  onRemoveFile={handleRemoveFile}
-                  onRemoveFolder={handleRemoveFolder}
-                  disabled={isUploading}
-                  selectedFiles={selectedFiles}
-                />
+                <div className="upload-workspace-layout">
+                  <div className="upload-column-left">
+                    <UploadBox
+                      onFileSelect={handleFileSelect}
+                      onRemoveFile={handleRemoveFile}
+                      onRemoveFolder={handleRemoveFolder}
+                      disabled={isUploading}
+                      selectedFiles={selectedFiles}
+                    />
 
-                <ExpirySelector
-                  selected={expiryMinutes}
-                  onChange={setExpiryMinutes}
-                  disabled={isUploading}
-                />
+                    {uploadProgress > 0 && (
+                      <div style={{ marginTop: '16px', marginBottom: '24px' }}>
+                        <ProgressBar
+                          progress={uploadProgress}
+                          stageText={
+                            uploadStage === 'processing'
+                              ? 'Step 2 of 2: Creating secure link'
+                              : 'Step 1 of 2: Uploading your files'
+                          }
+                          statusText={
+                            uploadStage === 'processing'
+                              ? 'Upload complete. Generating your share code...'
+                              : 'Uploading files...'
+                          }
+                          isIndeterminate={uploadStage === 'processing'}
+                        />
+                      </div>
+                    )}
 
-                {uploadProgress > 0 && <ProgressBar progress={uploadProgress} />}
+                    <ExpirySelector
+                      selected={expiryMinutes}
+                      onChange={setExpiryMinutes}
+                      disabled={isUploading}
+                    />
 
-                {uploadError && (
-                  <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p className="text-sm text-red-600 dark:text-red-400">{uploadError}</p>
+                    {uploadError && (
+                      <div
+                        style={{
+                          padding: '16px',
+                          backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                          border: '1px solid var(--red)',
+                          borderRadius: '12px',
+                          marginBottom: '24px',
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: '14px',
+                            color: 'var(--red)',
+                          }}
+                        >
+                          {uploadError}
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleUpload}
+                      disabled={selectedFiles.length === 0 || isUploading}
+                      className="btn-primary upload-submit-btn"
+                    >
+                      {isUploading
+                        ? uploadStage === 'processing'
+                          ? 'Generating Share Code...'
+                          : 'Uploading...'
+                        : selectedFiles.length > 1
+                          ? 'Upload & Zip Files'
+                          : 'Upload File'}
+                    </button>
                   </div>
-                )}
 
-                <button
-                  onClick={handleUpload}
-                  disabled={selectedFiles.length === 0 || isUploading}
-                  className={`w-full px-6 py-3 rounded-lg font-semibold transition-colors ${
-                    selectedFiles.length === 0 || isUploading
-                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-700 dark:hover:from-blue-600 dark:hover:to-cyan-600'
-                  }`}
-                >
-                  {isUploading ? 'Uploading...' : selectedFiles.length > 1 ? 'Upload & Zip Files' : 'Upload File'}
-                </button>
+                  <aside className="upload-column-right fade-up fade-up-delay-3">
+                    <div className="upload-download-widget">
+                      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                        <h3
+                          style={{
+                            fontFamily: `'Instrument Serif', serif`,
+                            fontSize: '32px',
+                            fontWeight: '400',
+                            color: 'var(--ink)',
+                            marginBottom: '6px',
+                          }}
+                        >
+                          Download <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>a file</span>
+                        </h3>
+                        <p
+                          style={{
+                            fontSize: '13px',
+                            color: 'var(--ink3)',
+                          }}
+                        >
+                          Enter the code to search
+                        </p>
+                      </div>
+                      <DownloadForm onDownload={handleDownload} />
+                    </div>
+                  </aside>
+                </div>
               </>
             )}
           </section>
@@ -210,10 +348,33 @@ export default function Home() {
 
         {/* Download Section */}
         {activeTab === 'download' && (
-          <section className="space-y-8 max-w-md mx-auto">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold">Download a File</h2>
-              <p className="text-gray-600 dark:text-gray-400">Enter the code you received</p>
+          <section 
+            style={{
+              maxWidth: '500px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              marginBottom: '64px',
+            }}
+            className="fade-up fade-up-delay-2"
+          >
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <h2 
+                style={{
+                  fontFamily: `'Instrument Serif', serif`,
+                  fontSize: '36px',
+                  fontWeight: '400',
+                  color: 'var(--ink)',
+                  marginBottom: '8px',
+                }}
+              >
+                Download <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>a file</span>
+              </h2>
+              <p style={{
+                fontSize: '14px',
+                color: 'var(--ink3)',
+              }}>
+                Enter the code you received to download
+              </p>
             </div>
             <DownloadForm onDownload={handleDownload} initialCode={prefillDownloadCode} />
           </section>
@@ -221,11 +382,9 @@ export default function Home() {
 
         {/* How It Works Section */}
         {activeTab === 'upload' && !uploadedCode && <HowItWorks />}
-      </main>
+      </MainContent>
 
-      <div className="max-w-4xl mx-auto px-4">
-        <Footer />
-      </div>
+      <Footer />
     </div>
   )
 }

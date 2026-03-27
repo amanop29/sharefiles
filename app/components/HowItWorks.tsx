@@ -6,56 +6,62 @@ export function HowItWorks() {
   const steps = [
     {
       icon: Upload,
-      title: 'Upload Your File',
-      description: 'Select a file (up to 100MB) and choose how long you want to share it',
+      step: 'Step 1',
+      title: 'Upload Your Files',
+      description: 'Drop files or folders, review the stack, and pick an expiry time.',
     },
     {
       icon: Share2,
-      title: 'Share the Code',
-      description: 'Get a unique 6-character code or QR code to share with anyone',
+      step: 'Step 2',
+      title: 'Share The Code',
+      description: 'Get a unique 6-character code and QR that points to the same download link.',
     },
     {
       icon: Download,
+      step: 'Step 3',
       title: 'Download Before Expiry',
-      description: 'Recipients can download your file using the code before it expires',
+      description: 'Recipient enters the code or scans QR and downloads before auto-delete.',
     },
   ]
 
   return (
-    <section className="py-16 space-y-12">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-50">How It Works</h2>
-        <p className="text-gray-600 dark:text-gray-400">Simple, fast, and secure file sharing</p>
+    <section className="how-it-works fade-up fade-up-delay-3">
+      {/* Header */}
+      <div className="how-it-works-header">
+        <p className="eyebrow" style={{ marginBottom: '16px' }}>
+          How It Works
+        </p>
+        <h2 className="how-it-works-heading">
+          Simple. Fast. <span style={{ fontStyle: 'italic', color: 'var(--accent)' }}>Gone.</span>
+        </h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Grid */}
+      <div className="how-it-works-grid">
         {steps.map((step, index) => {
           const Icon = step.icon
           return (
             <div
               key={index}
-              className="relative group"
+              className="how-it-works-step"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 dark:from-blue-500/10 dark:to-cyan-500/10 rounded-2xl group-hover:from-blue-500/10 group-hover:to-cyan-500/10 transition-colors" />
-              
-              <div className="relative border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
+              {/* Step number */}
+              <div className="how-it-works-step-number">{index + 1}</div>
 
-                <div>
-                  <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                    Step {index + 1}
-                  </p>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-50">
-                    {step.title}
-                  </h3>
-                </div>
+              <p className="how-it-works-step-kicker">{step.step}</p>
 
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  {step.description}
-                </p>
+              {/* Icon */}
+              <div className="how-it-works-step-icon">
+                <Icon />
               </div>
+
+              {/* Title */}
+              <h3 className="how-it-works-step-title">{step.title}</h3>
+
+              {/* Description */}
+              <p className="how-it-works-step-description">
+                {step.description}
+              </p>
             </div>
           )
         })}

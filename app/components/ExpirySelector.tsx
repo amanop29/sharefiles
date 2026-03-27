@@ -2,7 +2,6 @@
 
 import { EXPIRY_LABELS, EXPIRY_OPTIONS } from '@/app/lib/constants'
 import { ExpiryMinutes } from '@/app/lib/types'
-import clsx from 'clsx'
 
 interface ExpirySelectorProps {
   selected: ExpiryMinutes | null
@@ -11,34 +10,39 @@ interface ExpirySelectorProps {
 }
 
 export function ExpirySelector({ selected, onChange, disabled }: ExpirySelectorProps) {
-  const options: ExpiryMinutes[] = [15, 60, 1440]
+  const options: ExpiryMinutes[] = [15, 60, 1440, 10080]
+  const descriptions: Record<ExpiryMinutes, string> = {
+    15: 'Quick share',
+    60: 'Standard',
+    1440: 'Keep longer',
+    10080: 'One week',
+  }
 
   return (
-    <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Expiry Time
-      </label>
-      <div className="grid grid-cols-3 gap-3">
+    <div className="expiry-selector">
+      <label className="expiry-label">Expiry Time</label>
+      
+      <div className="expiry-options">
         {options.map((minutes) => (
           <button
             key={minutes}
-            onClick={() => onChange(minutes)}
+            onClick={() => !disabled && onChange(minutes)}
             disabled={disabled}
-            className={clsx(
-              'px-4 py-2 rounded-lg font-medium transition-all duration-200',
-              selected === minutes
-                ? 'bg-blue-600 text-white shadow-lg dark:bg-blue-500'
-                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700',
-              disabled && 'opacity-50 cursor-not-allowed'
-            )}
+            className={`expiry-option ${selected === minutes ? 'active' : ''}`}
+            style={{
+              opacity: disabled ? 0.5 : 1,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+            }}
           >
-            {EXPIRY_LABELS[minutes]}
+            <span className="expiry-option-time">{EXPIRY_LABELS[minutes as ExpiryMinutes]}</span>
+            <span className="expiry-option-description">{descriptions[minutes as ExpiryMinutes]}</span>
           </button>
         ))}
       </div>
+
       {selected && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          File will expire in {EXPIRY_OPTIONS[selected]}
+        <p className="expiry-note">
+          File will expire in {EXPIRY_OPTIONS[selected as ExpiryMinutes]}
         </p>
       )}
     </div>
