@@ -238,11 +238,7 @@ export function UploadBox({
       }}
     >
       <input
-        {...getInputProps({
-          // Allow selecting full folders from the file picker in addition to drag/drop folders.
-          ...( { webkitdirectory: '' } as unknown as Record<string, string> ),
-          ...( { directory: '' } as unknown as Record<string, string> ),
-        })}
+        {...getInputProps()}
       />
 
       {selectedFiles.length > 0 ? (
