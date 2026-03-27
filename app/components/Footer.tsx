@@ -18,6 +18,11 @@ export function Footer() {
       <div>
         © 2026 ShareFiles. All rights reserved.
       </div>
+
+      {/* Right */}
+      <div>
+        Anything to say? Mail me at <a href="mailto:contact@streetfreak.in" style={{ color: 'var(--ink3)' }}>contact@streetfreak.in</a>
+      </div>
     </footer>
   )
 }
