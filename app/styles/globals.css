@@ -910,6 +910,7 @@ html.dark .result-expiry {
 
 .download-result-info {
   flex: 1;
+  min-width: 0;
 }
 
 .download-result-filename {
@@ -917,6 +918,9 @@ html.dark .result-expiry {
   font-weight: 500;
   color: var(--ink);
   margin-bottom: 4px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .download-result-meta {
@@ -941,6 +945,7 @@ html.dark .result-expiry {
   padding: 12px 24px;
   font-size: 14px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .download-result-button:not(:disabled):hover {
