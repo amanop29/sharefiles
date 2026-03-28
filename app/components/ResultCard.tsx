@@ -51,6 +51,12 @@ export function ResultCard({ code, filename, expiresAt, onReset }: ResultCardPro
         <h3 className="result-card-heading">{filename} uploaded</h3>
       </div>
 
+      {/* Expiry info */}
+      <div className="result-expiry" style={{ marginBottom: '24px' }}>
+        <Clock />
+        <span>Expires in {remaining.text}</span>
+      </div>
+
       {/* Code section */}
       <div style={{ marginBottom: '24px' }}>
         <label className="result-card-label">Share Code</label>
@@ -93,12 +99,6 @@ export function ResultCard({ code, filename, expiresAt, onReset }: ResultCardPro
               </>
             )}
           </button>
-        </div>
-
-        {/* Expiry info */}
-        <div className="result-expiry">
-          <Clock />
-          <span>Expires in {remaining.text}</span>
         </div>
       </div>
 

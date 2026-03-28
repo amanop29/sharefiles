@@ -95,51 +95,88 @@ export function QRCodeDisplay({ code }: QRCodeDisplayProps) {
 
   const downloadQR = () => {
     const svg = qrRef.current?.querySelector('svg') as SVGSVGElement | null
-    if (svg) {
-      const svgData = new XMLSerializer().serializeToString(svg)
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-      const svgUrl = URL.createObjectURL(svgBlob)
-      const img = new Image()
+    if (!svg) return
 
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const width = Number(svg.getAttribute('width')) || 200
-        const height = Number(svg.getAttribute('height')) || 200
-        const exportScale = 8
-        canvas.width = width * exportScale
-        canvas.height = height * exportScale
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          URL.revokeObjectURL(svgUrl)
-          return
-        }
+    // Use a higher scale for better quality
+    const width = 200
+    const height = 200
+    const scale = 10
 
-        ctx.imageSmoothingEnabled = false
-        ctx.setTransform(exportScale, 0, 0, exportScale, 0, 0)
-        ctx.fillStyle = '#f7f5f0'
-        ctx.fillRect(0, 0, width, height)
-        ctx.drawImage(img, 0, 0, width, height)
+    const canvas = document.createElement('canvas')
+    canvas.width = width * scale
+    canvas.height = height * scale
 
-        const pngUrl = canvas.toDataURL('image/png')
-        const link = document.createElement('a')
-        link.href = pngUrl
-        link.download = `sharefiles-${code}.png`
-        link.click()
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-        URL.revokeObjectURL(svgUrl)
-      }
+    ctx.scale(scale, scale)
 
-      img.onerror = () => {
-        URL.revokeObjectURL(svgUrl)
-      }
+    // Render SVG to canvas
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
 
-      img.src = svgUrl
-      return
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      // Draw background
+      ctx.fillStyle = '#f7f5f0'
+      ctx.fillRect(0, 0, width, height)
+
+      // Draw the SVG (which includes the badge)
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // Draw the badge text on top as fallback
+      const badgeSize = 60
+      const badgeX = width / 2 - badgeSize / 2
+      const badgeY = height / 2 - badgeSize / 2
+
+      ctx.fillStyle = '#f7f5f0'
+      ctx.beginPath()
+      ctx.roundRect(badgeX + 4, badgeY + 4, badgeSize - 8, badgeSize - 8, 10)
+      ctx.fill()
+
+      ctx.strokeStyle = '#c9d5ff'
+      ctx.lineWidth = 1
+      ctx.stroke()
+
+      // Share text
+      ctx.fillStyle = '#0f0e0c'
+      ctx.font = 'bold 12px system-ui'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('Share', width / 2, height / 2 - 8)
+
+      // Files text
+      ctx.fillStyle = '#1a56ff'
+      ctx.font = 'bold 14px system-ui'
+      ctx.fillText('Files', width / 2, height / 2 + 8)
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const downUrl = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = downUrl
+            link.download = `sharefiles-${code}.png`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            setTimeout(() => URL.revokeObjectURL(downUrl), 100)
+          }
+          URL.revokeObjectURL(url)
+        },
+        'image/png',
+        0.95
+      )
     }
 
-    if (qrCodeRef.current) {
-      qrCodeRef.current.download({ name: `sharefiles-${code}`, extension: 'png' })
+    img.onerror = () => {
+      console.error('Failed to load SVG for export')
+      URL.revokeObjectURL(url)
     }
+
+    img.src = url
   }
 
   return (
