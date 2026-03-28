@@ -95,7 +95,12 @@ export async function GET(request: NextRequest) {
 
       const safeFilename = encodeURIComponent(data.filename)
       const headers = new Headers()
-      headers.set('Content-Type', objectResponse.ContentType || data.mime_type || 'application/octet-stream')
+      
+      // Force application/octet-stream for PDFs to prevent Safari Mobile from opening inline
+      const mimeType = objectResponse.ContentType || data.mime_type || 'application/octet-stream'
+      const contentType = mimeType === 'application/pdf' ? 'application/octet-stream' : mimeType
+      
+      headers.set('Content-Type', contentType)
       headers.set('Content-Disposition', `attachment; filename*=UTF-8''${safeFilename}`)
 
       if (typeof objectResponse.ContentLength === 'number') {
