@@ -2,8 +2,9 @@
 
 import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { ChevronDown, ChevronRight, Folder, Upload, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Folder, Upload, X, AlertCircle } from 'lucide-react'
 import { formatFileSize } from '@/app/lib/utils'
+import { MAX_TOTAL_UPLOAD_SIZE } from '@/app/lib/constants'
 
 export type UploadInputFile = File & {
   path?: string
@@ -304,6 +305,25 @@ export function UploadBox({
             <p className="upload-selection-summary">
               {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} • {formatFileSize(totalSize)}
             </p>
+
+            {totalSize > MAX_TOTAL_UPLOAD_SIZE && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '12px',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '6px',
+                marginTop: '12px',
+              }}>
+                <AlertCircle size={20} style={{ color: '#ef4444', marginTop: '2px', flexShrink: 0 }} />
+                <div style={{ fontSize: '14px', color: '#dc2626', lineHeight: '1.4' }}>
+                  <strong>Upload size exceeds 3GB limit</strong> by {formatFileSize(totalSize - MAX_TOTAL_UPLOAD_SIZE)}. 
+                  Please remove some files to continue.
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div>

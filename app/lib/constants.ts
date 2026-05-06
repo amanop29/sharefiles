@@ -1,7 +1,7 @@
 // Constants for the ShareFiles app
 
-export const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB per file
-export const MAX_TOTAL_UPLOAD_SIZE = 1024 * 1024 * 1024 // 1GB per upload
+export const MAX_FILE_SIZE = 3 * 1024 * 1024 * 1024 // 3GB per file
+export const MAX_TOTAL_UPLOAD_SIZE = 3 * 1024 * 1024 * 1024 // 3GB per upload
 
 export const ALLOWED_FILE_TYPES = [
   // Documents

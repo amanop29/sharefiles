@@ -173,7 +173,7 @@ export default function Home() {
 
     if (exceedsUploadLimit) {
       setUploadError(
-        `Selected files exceed the 1GB upload limit by ${formatFileSize(
+        `Selected files exceed the 3GB upload limit by ${formatFileSize(
           selectedTotalSize - MAX_TOTAL_UPLOAD_SIZE
         )}. Remove some files and try again.`
       )

@@ -16,7 +16,7 @@ A production-ready, single-page file sharing application built with Next.js 15, 
 - 🗄️ Supabase for metadata storage
 - 🚀 Auto-delete expired files (cron-ready)
 - 📥 Download files by entering code
-- 📊 File size validation (max 1GB)
+- 📊 File size validation (max 3GB)
 - ✅ File type validation
 - 🎨 Clean, minimal UI
 - 📱 Fully responsive (mobile, tablet, desktop)
